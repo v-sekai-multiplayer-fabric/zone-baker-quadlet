@@ -75,6 +75,10 @@ build {
   name    = "zone-baker-image-${var.version}"
   sources = ["source.qemu.zone-baker"]
 
+  provisioner "shell" {
+    inline = ["mkdir -p /tmp/quadlets"]
+  }
+
   provisioner "file" {
     source      = "../configs/quadlets/"
     destination = "/tmp/quadlets/"
