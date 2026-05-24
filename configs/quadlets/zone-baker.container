@@ -1,0 +1,21 @@
+[Unit]
+Description=zone-baker headless Godot asset validator + exporter
+Documentation=https://github.com/v-sekai-multiplayer-fabric/zone-baker
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/v-sekai-multiplayer-fabric/zone-baker:latest
+ContainerName=zone-baker
+Volume=/var/lib/zone-baker:/var/lib/zone-baker:Z
+EnvironmentFile=/etc/zone-baker/env
+# zone-baker has no fixed listening port today. If it grows an HTTP
+# trigger surface, add PublishPort here.
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target default.target
