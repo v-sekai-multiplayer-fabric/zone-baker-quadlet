@@ -1,48 +1,36 @@
-# zone-baker-image
+# zone-baker-quadlet
 
-V-Sekai baker VM image: headless Godot asset validator + exporter
-(zone-baker), run as a podman quadlet on top of `linux-base-image`.
-Built once per release via packer; consumed by the `infra` repo as the
-qcow2 for `harvester_virtualmachine.baker`.
+Podman [quadlet](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html)
+source for zone-baker — a headless Godot asset validator + exporter
+(`FROM godot-editor-double`). Run by systemd on an AlmaLinux host.
 
-## What's in the image
+This repo is the source of truth for the unit; it is installed onto a
+host rather than baked into a VM image.
 
-Inherits everything from `linux-base-image` (AlmaLinux 9 + podman +
-chrony + qemu-guest-agent), and adds:
+## Layout
 
-- `/etc/containers/systemd/zone-baker.container` — podman quadlet
-  running `ghcr.io/v-sekai-multiplayer-fabric/zone-baker`
-- `/var/lib/zone-baker` — mountpoint for staging assets and exporter
-  output
+- `quadlets/zone-baker.container` — the quadlet. Tag pinned here.
+- `install.sh` — installs the unit, creates `/var/lib/zone-baker`
+  (staging in / exporter output), pre-pulls the image, reloads systemd.
 
-zone-baker is `FROM godot-editor-double` (built by `godot-images`) and
-runs the headless Godot editor for asset baking. The container image
-is pre-pulled into podman's local store so first boot is fast. Tag
-pinned in `configs/quadlets/zone-baker.container`; bumping is a
-deliberate edit + re-bake.
+The trigger model is TBD: zone-baker may become an on-demand job (queue
+consumer) rather than a daemon. The quadlet here assumes daemon mode and
+will be revised when the trigger architecture lands.
 
-Trigger model is TBD: zone-baker may run as an on-demand job (queue
-consumer) rather than a daemon. The quadlet here assumes daemon mode
-and will be revised when the trigger architecture lands.
-
-## Build
-
-CI on push to main + weekly schedule. Local:
+## Install
 
 ```sh
-cd packer
-bash scripts/prepare-cidata.sh
-packer init build.pkr.hcl
-packer build build.pkr.hcl
-ls ../output/
+sudo ./install.sh
+# write /etc/zone-baker/env if the deployment needs it
+sudo systemctl start zone-baker.service
 ```
 
-## Inheritance
+## Configuration (per-deployment, NOT in this repo)
 
-Pin the parent version explicitly in `build.pkr.hcl`:
+- `/etc/zone-baker/env` — per-deployment config.
+- `/var/lib/zone-baker` — staging + output dir.
 
-```hcl
-variable "source_image_url" {
-  default = "https://github.com/v-sekai-multiplayer-fabric/linux-base-image/releases/download/v0.1.0/linux-base-image.qcow2"
-}
-```
+## CI
+
+`.github/workflows/lint.yml` validates the unit via podman's systemd
+generator on every push/PR.
